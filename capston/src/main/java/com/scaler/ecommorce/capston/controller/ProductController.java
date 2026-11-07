@@ -2,11 +2,16 @@ package com.scaler.ecommorce.capston.controller;
 
 import java.net.URI;
 
+import com.scaler.ecommorce.capston.config.OpenApiConfig;
 import com.scaler.ecommorce.capston.dtos.CreateProductDto;
 import com.scaler.ecommorce.capston.dtos.ProductPageResponse;
 import com.scaler.ecommorce.capston.dtos.ProductResponse;
 import com.scaler.ecommorce.capston.dtos.UpdateProductPriceDto;
 import com.scaler.ecommorce.capston.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -27,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/products")
+@Tag(name = "Products")
 public class ProductController {
     private final ProductService productService;
 
@@ -35,11 +41,13 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get a product by ID")
     public ProductResponse getProductById(@PathVariable @Positive long id) {
         return ProductResponse.from(productService.getProductById(id));
     }
 
     @GetMapping
+    @Operation(summary = "List products", description = "Pages are zero-based and sorted by price, then ID.")
     public ProductPageResponse getProducts(@RequestParam(defaultValue = "0") @Min(0) int page,
                                            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         validateOffset(page, size);
@@ -47,6 +55,8 @@ public class ProductController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a product", security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponse(responseCode = "201", description = "Product created", useReturnTypeSchema = true)
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductDto request) {
         var product = productService.createProduct(request.title(), request.image(), request.description(),
                 request.price().doubleValue(), request.categoryName());
@@ -54,11 +64,13 @@ public class ProductController {
     }
 
     @PutMapping
+    @Operation(summary = "Update a product price", security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
     public ProductResponse updatePrice(@Valid @RequestBody UpdateProductPriceDto request) {
         return ProductResponse.from(productService.updateProductPrice(request.id(), request.price().doubleValue()));
     }
 
     @GetMapping("/title")
+    @Operation(summary = "Find products by title", description = "Returns a zero-based page of exact title matches.")
     public ProductPageResponse getByTitle(@RequestParam @NotBlank @Size(max = 255) String title,
                                           @RequestParam(defaultValue = "0") @Min(0) int page,
                                           @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
