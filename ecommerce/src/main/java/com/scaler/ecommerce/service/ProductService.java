@@ -9,6 +9,8 @@ public interface ProductService {
 
     Page<Product> getAllProducts(int page, int size);
 
+    Page<Product> browse(Long category, String search, String sort, int page, int size);
+
     Product createProduct(String title, String image, String description, double price, String categoryName);
 
     Product updateProductPrice(long id, double price);

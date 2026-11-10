@@ -10,6 +10,7 @@ import com.scaler.ecommerce.dtos.LoginResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DefaultOAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.server.resource.introspection.BadOpaqueTokenException;
@@ -63,13 +64,16 @@ public class UserAuthClient implements OpaqueTokenIntrospector {
         }
         if (token.userId() != null && token.userId() > 0 && token.email() != null && !token.email().isBlank()) {
             return new DefaultOAuth2AuthenticatedPrincipal(token.userId().toString(),
-                    Map.of("exp", token.expiresAt(), "user_id", token.userId(), "email", token.email()), List.of());
+                    Map.of("exp", token.expiresAt(), "user_id", token.userId(), "email", token.email()),
+                    token.roles() != null && token.roles().contains("ADMIN")
+                            ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.of());
         }
         return new DefaultOAuth2AuthenticatedPrincipal(Integer.toString(token.id()),
                 Map.of("exp", token.expiresAt()), List.of());
     }
 
-    private record AuthToken(int id, String value, Instant expiresAt, boolean active, Long userId, String email) {
+    private record AuthToken(int id, String value, Instant expiresAt, boolean active, Long userId, String email,
+                             List<String> roles) {
         boolean usable() {
             return id > 0 && value != null && !value.isBlank() && active
                     && expiresAt != null && expiresAt.isAfter(Instant.now());

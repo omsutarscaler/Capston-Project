@@ -45,10 +45,14 @@ public class SecurityConfig {
 
         return http
                 .securityMatcher(new OrRequestMatcher(paths.matcher(HttpMethod.POST, "/products/**"),
-                        paths.matcher(HttpMethod.PUT, "/products/**"), paths.matcher("/checkout/**")))
+                        paths.matcher(HttpMethod.PUT, "/products/**"), paths.matcher("/checkout/**"),
+                        paths.matcher("/shopping/**"), paths.matcher(HttpMethod.PUT, "/inventory/**"),
+                        paths.matcher(HttpMethod.PUT, "/reviews/**")))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+                .authorizeHttpRequests(requests -> requests
+                        .requestMatchers(paths.matcher(HttpMethod.PUT, "/inventory/**")).hasRole("ADMIN")
+                        .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(entryPoint))
                 .oauth2ResourceServer(server -> {
                     server.authenticationEntryPoint(entryPoint)

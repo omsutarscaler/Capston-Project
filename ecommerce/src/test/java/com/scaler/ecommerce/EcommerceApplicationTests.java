@@ -1,10 +1,15 @@
 package com.scaler.ecommerce;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.scaler.ecommerce.components.PaymentGatewayClient;
 import com.scaler.ecommerce.components.PaymentGatewayClient.Payment;
 import com.scaler.ecommerce.service.ProductService;
+import com.scaler.ecommerce.service.InventoryService;
+import com.scaler.ecommerce.service.CheckoutService;
+import com.scaler.ecommerce.service.ShoppingService;
 import com.scaler.ecommerce.model.Product;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +25,11 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,6 +49,15 @@ class EcommerceApplicationTests {
 	private ProductService products;
 
 	@Autowired
+	private InventoryService inventory;
+
+	@Autowired
+	private ShoppingService shopping;
+
+	@Autowired
+	private CheckoutService checkout;
+
+	@Autowired
 	private MockMvc mvc;
 
 	@Autowired
@@ -55,6 +72,7 @@ class EcommerceApplicationTests {
 	@Test
 	void verifiesPaymentAndEmailsAccountOnce() throws Exception {
 		var product = products.createProduct("Checkout product", "", "", 99.50, "Checkout");
+		inventory.setAvailable(product.getId(), 1);
 		UUID orderId = UUID.randomUUID();
 		String paymentId = "cs_test_checkout";
 		String checkoutUrl = "https://checkout.stripe.com/c/pay/cs_test_checkout";
@@ -93,6 +111,58 @@ class EcommerceApplicationTests {
 		mvc.perform(post("/checkout/{id}/confirm", orderId).header("Authorization", "Bearer other"))
 				.andExpect(status().isNotFound());
 		auth.verify();
+	}
+
+	@Test
+	void concurrentCartCheckoutsCannotReserveTheSameLastItem() throws Exception {
+		var product = products.createProduct("Last item", "", "", 99.50, "Stock");
+		inventory.setAvailable(product.getId(), 1);
+		shopping.setQuantity(301, product.getId(), 1);
+		shopping.setQuantity(302, product.getId(), 1);
+		when(gateway.create(any())).thenAnswer(call -> {
+			com.scaler.ecommerce.model.CheckoutOrder order = call.getArgument(0);
+			return new Payment("cs_test_stock", "capston", order.getId().toString(), 9950L,
+					"inr", "https://checkout.stripe.com/test", "open", "unpaid");
+		});
+		UUID first = UUID.randomUUID();
+		UUID second = UUID.randomUUID();
+		var a = CompletableFuture.supplyAsync(() -> reserveCart(first, 301));
+		var b = CompletableFuture.supplyAsync(() -> reserveCart(second, 302));
+		boolean firstWon = a.get(15, TimeUnit.SECONDS);
+		boolean secondWon = b.get(15, TimeUnit.SECONDS);
+		assertEquals(true, firstWon ^ secondWon);
+		assertEquals(0, inventory.available(product.getId()));
+		UUID winner = firstWon ? first : second;
+		long buyer = firstWon ? 301 : 302;
+		when(gateway.cancel("cs_test_stock")).thenReturn(new Payment("cs_test_stock", "capston",
+				winner.toString(), 9950L, "inr", null, "expired", "unpaid"));
+		assertEquals(true, checkout.cancel(winner, buyer).expired());
+		assertEquals(1, inventory.available(product.getId()));
+		checkout.cancel(winner, buyer);
+		assertEquals(1, inventory.available(product.getId()));
+	}
+
+	@Test
+	void capsTheTotalCartQuantityAcrossProducts() {
+		var first = products.createProduct("Bulk first", "", "", 10, "Stock");
+		var second = products.createProduct("Bulk second", "", "", 10, "Stock");
+		inventory.setAvailable(first.getId(), 20);
+		inventory.setAvailable(second.getId(), 20);
+		shopping.setQuantity(303, first.getId(), 6);
+		var rejected = assertThrows(ResponseStatusException.class,
+				() -> shopping.setQuantity(303, second.getId(), 5));
+		assertEquals(409, rejected.getStatusCode().value());
+		assertEquals(1, shopping.contents(303).cart().size());
+	}
+
+	private boolean reserveCart(UUID id, long userId) {
+		try {
+			checkout.start(id, null, userId, "buyer@example.test");
+			return true;
+		} catch (ResponseStatusException e) {
+			assertEquals(409, e.getStatusCode().value());
+			return false;
+		}
 	}
 
 	@Test

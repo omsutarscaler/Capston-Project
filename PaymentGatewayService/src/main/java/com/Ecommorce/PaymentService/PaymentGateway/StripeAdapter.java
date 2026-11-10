@@ -11,6 +11,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.checkout.SessionCreateParams;
+import com.stripe.param.checkout.SessionExpireParams;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -67,6 +68,23 @@ public class StripeAdapter implements PaymentGatewayAdapter {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe could not retrieve the checkout");
         } catch (StripeException e) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe could not retrieve the checkout");
+        }
+    }
+
+    @Override
+    public PaymentResponse expireCheckout(String id) {
+        PaymentResponse current = getCheckout(id);
+        if (!"open".equals(current.checkoutStatus())) return current;
+        try {
+            Session session = new Session();
+            session.setId(id);
+            return response(session.expire(SessionExpireParams.builder().build(), options().build()));
+        } catch (InvalidRequestException e) {
+            PaymentResponse latest = getCheckout(id);
+            if (!"open".equals(latest.checkoutStatus())) return latest;
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe could not cancel the checkout");
+        } catch (StripeException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Stripe could not cancel the checkout");
         }
     }
 

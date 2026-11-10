@@ -7,4 +7,6 @@ public interface paymentService {
     PaymentResponse createPayment(RequestPaymentDto request, String idempotencyKey);
 
     PaymentResponse getPayment(String id);
+
+    PaymentResponse cancelPayment(String id);
 }

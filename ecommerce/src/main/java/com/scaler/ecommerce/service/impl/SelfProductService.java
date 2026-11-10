@@ -37,6 +37,16 @@ public class SelfProductService implements ProductService {
     }
 
     @Override
+    public Page<Product> browse(Long category, String search, String sort, int page, int size) {
+        Sort order = switch (sort) {
+            case "price-desc" -> Sort.by(Sort.Order.desc("price"), Sort.Order.asc("id"));
+            case "newest" -> Sort.by(Sort.Order.desc("id"));
+            default -> PAGE_ORDER;
+        };
+        return productRepository.browse(category, search.strip(), PageRequest.of(page, size, order));
+    }
+
+    @Override
     @Transactional
     public Product createProduct(String title, String image, String description, double price, String categoryName) {
         Category category = categoryService.findByName(categoryName);

@@ -7,12 +7,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,6 +31,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 })
 @AutoConfigureMockMvc
 class UserAuthServiceApplicationTests {
+	@MockBean
+	private JavaMailSender mail;
+
+	@Test
+	void resetLinkIsSingleUseAndRevokesExistingSessions() throws Exception {
+		String email = "reset@example.test";
+		users.signup("Reset buyer", email, "old-password");
+		String oldToken = users.login(email, "old-password").getValue();
+		mvc.perform(post("/user/forgot-password").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"reset@example.test\"}"))
+				.andExpect(status().isAccepted());
+		var receipt = ArgumentCaptor.forClass(SimpleMailMessage.class);
+		verify(mail).send(receipt.capture());
+		assertEquals(email, receipt.getValue().getTo()[0]);
+		String token = receipt.getValue().getText().split("#reset=")[1];
+		String reset = mapper.writeValueAsString(java.util.Map.of("token", token, "password", "new-password"));
+		mvc.perform(post("/user/reset-password").contentType(MediaType.APPLICATION_JSON).content(reset))
+				.andExpect(status().isNoContent());
+		mvc.perform(post("/user/reset-password").contentType(MediaType.APPLICATION_JSON).content(reset))
+				.andExpect(status().isBadRequest());
+		mvc.perform(post("/user/validate-token").contentType(MediaType.APPLICATION_JSON)
+						.content(mapper.writeValueAsString(java.util.Map.of("token", oldToken))))
+				.andExpect(status().isUnauthorized());
+		mvc.perform(post("/user/login").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"email\":\"reset@example.test\",\"password\":\"new-password\"}"))
+				.andExpect(status().isOk());
+	}
 	@Autowired
 	private UserService users;
 

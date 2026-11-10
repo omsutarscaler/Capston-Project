@@ -22,4 +22,9 @@ public class paymentServiceImpl implements paymentService {
     public PaymentResponse getPayment(String id) {
         return gateway.getCheckout(id);
     }
+
+    @Override
+    public PaymentResponse cancelPayment(String id) {
+        return gateway.expireCheckout(id);
+    }
 }

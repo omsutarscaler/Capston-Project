@@ -1,6 +1,7 @@
 package com.example.UserAuthService.models;
 
 import java.util.List;
+import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.ElementCollection;
@@ -22,6 +23,11 @@ public class User {
     @JsonIgnore
     @ToString.Exclude
     private String password;
+    @JsonIgnore
+    @ToString.Exclude
+    private String resetTokenHash;
+    @JsonIgnore
+    private Instant resetExpiresAt;
     @ElementCollection
     private List<Role> roles;
 }

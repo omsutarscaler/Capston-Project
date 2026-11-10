@@ -1,6 +1,8 @@
 package com.example.UserAuthService.dtos;
 
 import java.util.Date;
+import java.util.List;
+import com.example.UserAuthService.models.Role;
 
 import lombok.Data;
 
@@ -14,6 +16,7 @@ public class TokenResponseDto {
     private boolean active;
     private Long userId;
     private String email;
+    private List<Role> roles;
 
     public TokenResponseDto() {
     }

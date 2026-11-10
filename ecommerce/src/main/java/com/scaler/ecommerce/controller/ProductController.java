@@ -1,7 +1,10 @@
 package com.scaler.ecommerce.controller;
 
 import java.net.URI;
+import java.util.List;
 
+import com.scaler.ecommerce.dao.CategoryRepository;
+import com.scaler.ecommerce.dao.CategoryRepository.CatalogCategory;
 import com.scaler.ecommerce.config.OpenApiConfig;
 import com.scaler.ecommerce.dtos.CreateProductDto;
 import com.scaler.ecommerce.dtos.ProductPageResponse;
@@ -17,6 +20,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,9 +39,16 @@ import org.springframework.web.server.ResponseStatusException;
 @Tag(name = "Products")
 public class ProductController {
     private final ProductService productService;
+    private final CategoryRepository categories;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, CategoryRepository categories) {
         this.productService = productService;
+        this.categories = categories;
+    }
+
+    @GetMapping("/categories")
+    public List<CatalogCategory> categories() {
+        return categories.catalog();
     }
 
     @GetMapping("/{id}")
@@ -49,9 +60,16 @@ public class ProductController {
     @GetMapping
     @Operation(summary = "List products", description = "Pages are zero-based and sorted by price, then ID.")
     public ProductPageResponse getProducts(@RequestParam(defaultValue = "0") @Min(0) int page,
-                                           @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+                                           @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+                                           @RequestParam(required = false) @Positive Long category,
+                                           @RequestParam(defaultValue = "") @Size(max = 100) String q,
+                                           @RequestParam(defaultValue = "price-asc")
+                                           @Pattern(regexp = "price-asc|price-desc|newest") String sort) {
         validateOffset(page, size);
-        return ProductPageResponse.from(productService.getAllProducts(page, size));
+        if (category == null && q.isBlank() && "price-asc".equals(sort)) {
+            return ProductPageResponse.from(productService.getAllProducts(page, size));
+        }
+        return ProductPageResponse.from(productService.browse(category, q, sort, page, size));
     }
 
     @PostMapping

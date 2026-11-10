@@ -56,4 +56,11 @@ public class PaymentController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid payment service key");
         }
     }
+
+    @PostMapping("/{id}/cancel")
+    public PaymentResponse cancelPayment(@RequestHeader(value = "X-Service-Key", defaultValue = "") String key,
+            @PathVariable @Pattern(regexp = "cs_[a-zA-Z0-9_]{1,200}") String id) {
+        authorize(key);
+        return service.cancelPayment(id);
+    }
 }

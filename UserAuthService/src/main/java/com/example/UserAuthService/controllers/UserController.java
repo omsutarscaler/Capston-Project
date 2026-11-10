@@ -105,7 +105,9 @@ public class UserController {
     }
 
     private TokenResponseDto toResponse(Token token) {
-        return new TokenResponseDto(token.getId(), token.getValue(), token.getExpiresAt(), token.isActive(),
+        var response = new TokenResponseDto(token.getId(), token.getValue(), token.getExpiresAt(), token.isActive(),
                 token.getUser().getId(), token.getUser().getEmail());
+        response.setRoles(token.getUser().getRoles());
+        return response;
     }
 }

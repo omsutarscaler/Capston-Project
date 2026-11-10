@@ -13,6 +13,12 @@ Create the MySQL schemas and set `SPRING_DATASOURCE_PASSWORD` for UserAuthServic
 
 Set the same `PAYMENT_SERVICE_KEY` in Ecommerce and PaymentGatewayService. Set `STRIPE_API_KEY` only in PaymentGatewayService, using a sandbox key. Start UserAuthService and PaymentGatewayService, then start Ecommerce.
 
-Open the [storefront](http://localhost:8080/). Register an account through User Auth Swagger and add a product with a positive INR price through Ecommerce Swagger. Sign in to the storefront and select **Buy**. Complete the payment with [Stripe test card details](https://docs.stripe.com/testing#cards).
+From `storefront`, run `npm ci` and `npm run dev` with Node.js 20.9 or later. Open the [storefront](http://localhost:3000/) to register, sign in, browse, save products, or check out.
 
-Ecommerce verifies the payment and sends a receipt to the email on the account. For a local email test, start an SMTP catcher such as Mailpit on port 1025 and view captured receipts at [localhost:8025](http://localhost:8025/). For delivery to an inbox, set `SMTP_HOST`, `SMTP_PORT`, `RECEIPT_FROM`, and any required Spring Mail authentication and TLS properties in Ecommerce's environment. Ecommerce retries pending receipts while it is running. If you use a different storefront origin, set `checkout.storefront-url` to that origin's root URL for Stripe redirects.
+After Ecommerce starts and creates its tables, load the local demo catalog by running `node ecommerce/demo/catalog.mjs | mysql --default-character-set=utf8mb4 -u root -p test` from the repository root. The script fills the 50 demo categories to 20 products each while preserving existing records and stock.
+
+Create a product with a positive INR price using Ecommerce Swagger. Products start with zero inventory. Assign `ADMIN` to a trusted account in UserAuthService's `user_roles` table, then use that account's JWT with `PUT /inventory/{id}` and a body such as `{"available":5}`. The cart holds up to 10 units. Inventory is reserved at checkout and released when Stripe reports expiration or confirms cancellation. Complete a demo checkout with [Stripe test card details](https://docs.stripe.com/testing#cards).
+
+For local password reset and receipt emails, start an SMTP catcher such as Mailpit on port 1025 and view messages at [localhost:8025](http://localhost:8025/). For inbox delivery, configure `SMTP_HOST`, `SMTP_PORT`, `RECEIPT_FROM`, and the required Spring Mail authentication and TLS properties in both services. If you use a different storefront origin, set `STOREFRONT_URL` in Ecommerce and UserAuthService so checkout and reset links return there.
+
+Inventory and reviews are separate service modules within Ecommerce. Inventory shares the checkout database so an order and its stock reservation can be committed in one transaction.

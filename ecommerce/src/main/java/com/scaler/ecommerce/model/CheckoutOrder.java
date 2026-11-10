@@ -2,11 +2,15 @@ package com.scaler.ecommerce.model;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Id;
 import jakarta.persistence.Version;
+import jakarta.persistence.MapKeyColumn;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,6 +24,9 @@ public class CheckoutOrder {
     private Long version;
     private long userId;
     private long productId;
+    @ElementCollection
+    @MapKeyColumn(name = "product_id")
+    private Map<Long, Integer> quantities = new HashMap<>();
     private String email;
     private String title;
     private long amountMinor;

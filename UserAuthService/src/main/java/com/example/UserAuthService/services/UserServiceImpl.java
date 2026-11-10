@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.UserAuthService.exceptions.ExpiredTokenException;
 import com.example.UserAuthService.exceptions.InvalidTokenException;
@@ -54,8 +55,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public Token login(String email, String password) throws UserNotFoundException, PasswordMissMatchException {
-        Optional<User> optionalUser = this.userRepository.findUserByEmail(email);
+        Optional<User> optionalUser = this.userRepository.lockByEmail(email);
 
         User user = optionalUser.orElseThrow(() -> new UserNotFoundException("User not found"));
 

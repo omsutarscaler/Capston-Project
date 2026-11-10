@@ -46,6 +46,10 @@ public class PaymentGatewayClient {
         return exchange("/payment/" + id, HttpMethod.GET, new HttpEntity<>(headers()));
     }
 
+    public Payment cancel(String id) {
+        return exchange("/payment/" + id + "/cancel", HttpMethod.POST, new HttpEntity<>(headers()));
+    }
+
     private HttpHeaders headers() {
         if (serviceKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Payment gateway access is not configured");

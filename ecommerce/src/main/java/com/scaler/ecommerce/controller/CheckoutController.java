@@ -40,7 +40,12 @@ public class CheckoutController {
         return checkout.confirm(id, userId(user));
     }
 
-    private static long userId(OAuth2AuthenticatedPrincipal user) {
+    @PostMapping("/{id}/cancel")
+    public Checkout cancel(@PathVariable UUID id, @AuthenticationPrincipal OAuth2AuthenticatedPrincipal user) {
+        return checkout.cancel(id, userId(user));
+    }
+
+    static long userId(OAuth2AuthenticatedPrincipal user) {
         Long id = user.getAttribute("user_id");
         if (id == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User Auth Service must supply account details");
@@ -48,5 +53,5 @@ public class CheckoutController {
         return id;
     }
 
-    public record Request(@NotNull UUID orderId, @NotNull @Positive Long productId) {}
+    public record Request(@NotNull UUID orderId, @Positive Long productId) {}
 }

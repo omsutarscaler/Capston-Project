@@ -7,4 +7,6 @@ public interface PaymentGatewayAdapter {
     PaymentResponse createCheckout(RequestPaymentDto request, String idempotencyKey);
 
     PaymentResponse getCheckout(String id);
+
+    PaymentResponse expireCheckout(String id);
 }
