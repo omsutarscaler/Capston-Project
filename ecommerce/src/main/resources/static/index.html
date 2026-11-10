@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ecommerce Store</title>
+  <style>
+    body { font: 1rem system-ui, sans-serif; max-width: 55rem; margin: 3rem auto; padding: 0 1rem; color: #18243a; background: #f6f8fc; }
+    article, form { background: white; border: 1px solid #dce3ef; border-radius: .6rem; padding: 1rem; margin-bottom: 1rem; }
+    input, button { font: inherit; padding: .4rem; margin: .2rem; }
+    #products { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Ecommerce Store</h1>
+  <p>Stripe sandbox checkout</p>
+  <form id="login">
+    <label>Email <input name="email" type="email" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button>Sign in</button>
+  </form>
+  <p><a href="http://localhost:8081/swagger-ui/index.html">Create an account in User Auth Swagger</a></p>
+  <p id="message" role="status" aria-live="polite"></p>
+  <button id="check" hidden>Check payment status</button>
+  <h2>Products</h2>
+  <div id="products"></div>
+  <button id="previous" disabled>Previous page</button>
+  <button id="next" disabled>Next page</button>
+  <script src="/storefront.js" defer></script>
+</body>
+</html>
